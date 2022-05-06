@@ -3,10 +3,12 @@ package com.ejercicio.encora;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
+import com.google.gson.annotations.SerializedName;
 
 public class SearchCapicua {
 
@@ -36,8 +38,39 @@ public class SearchCapicua {
 
 	}
 
+	class Output {
+		@SerializedName("Amount of permutations found")
+		private int amount;
+		@SerializedName("Permutations found")
+		private List<String> permutations;
+
+		public Output(int amount, List<String> permutations) {
+			this.amount = amount;
+			this.permutations = permutations;
+		}
+
+		public int getAmount() {
+			return amount;
+		}
+
+		public void setAmount(int amount) {
+			this.amount = amount;
+		}
+
+		public List<String> getPermutations() {
+			return permutations;
+		}
+
+		public void setPermutations(List<String> permutations) {
+			this.permutations = permutations;
+		}
+
+	}
+
+	private Gson gson = new Gson();
+	private Gson parseObjPretty = gson.newBuilder().setPrettyPrinting().create();
+
 	public String find(InputStream input) {
-		Gson gson = new Gson();
 		BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(input));
 		Input jsonInput = gson.fromJson(bufferedReader, Input.class);
 		return findIntern(jsonInput.word, jsonInput.text);
@@ -45,37 +78,14 @@ public class SearchCapicua {
 
 	private String findIntern(String word, String text) {
 
-		int counter = 0;
-		List<String> permFound = new ArrayList<>();
-
 		/*
 		 * Aqui voy a implementar la logica de negocio
 		 */
 
-		String[] words = text.split(" ");
-		for (int i = 0; i < words.length; i++) {
-			String _word = words[i];
-			String _wordClean = removeChars(_word);
-			if (isPerm(word, _wordClean)) {
-				counter++;
-				permFound.add(_wordClean);
-			}
-		}
+		List<String> permFound = Arrays.asList(text.split(" ")).stream().map(_word -> removeChars(_word))
+				.filter(_word -> isPerm(word, _word)).toList();
 
-		return "\n{" + "\nAmount of permutations found:" + counter + "," + "\nPermutations found:" + toString(permFound)
-				+ "" + "\n}";
-	}
-
-	private String toString(List<String> permFound) {
-
-		String arrayString = "";
-
-		for (int i = 0; i < permFound.size(); i++) {
-			String perm = permFound.get(i);
-			arrayString += perm + (i < permFound.size() - 1 ? ", " : "");
-		}
-
-		return "[" + arrayString + "]";
+		return parseObjPretty.toJson(new Output(permFound.size(), permFound));
 	}
 
 	private boolean isPerm(String word, String _word) {
@@ -92,23 +102,14 @@ public class SearchCapicua {
 	}
 
 	private String removeChars(String word) {
-		String newWord = "";
-
-		for (int i = 0; i < word.length(); i++) {
-			char c = word.charAt(i);
-			if (Character.isLetter(c)) {
-				newWord += c;
-			}
-		}
-
-		return newWord;
+		return word.chars().filter(c -> (Character.isLetter(c) || Character.isDigit(c))).mapToObj(c -> ("" + (char) c))
+				.collect(Collectors.joining());
 	}
 
 	public static void main(String[] args) {
-		
-		InputStream inputStream = SearchCapicua.class.
-				getResourceAsStream("/com/ejercicio/encora/files/input.json");
-		
+
+		InputStream inputStream = SearchCapicua.class.getResourceAsStream("/com/ejercicio/encora/files/input.json");
+
 		String result = new SearchCapicua().find(inputStream);
 		System.out.println("Result: " + result);
 	}
